@@ -1,4 +1,4 @@
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 enum Status {
     Quotes(char),
     Word,
@@ -27,10 +27,10 @@ impl Code {
                         tkns.tokens.push(word.clone());
                         status = Status::Null;
                         word = String::new();
-                    } else if status == Status::Null {
-                        status = Status::Quotes(chars[index]);
-                    } else {
+                    } else if matches!(status, Status::Quotes(_)) {
                         word.push(chars[index]);
+		    } else {
+			status = Status::Quotes(chars[index]);
                     }
                 }
                 '|' | '&' | '>' | '<' | ';' => {
@@ -51,6 +51,13 @@ impl Code {
                 }
 		_ => {
 		    if chars[index] != ' ' || matches!(status, Status::Quotes(_)){
+			if matches!(status, Status::Operation(_)) && word != "" {
+				tkns.tokens.push(word.clone());
+				word = String::new();
+			}
+			if !matches!(status, Status::Quotes(_)) {
+                                status = Status::Word;
+                        }
                         word.push(chars[index]);
                     }
 		}
@@ -60,7 +67,8 @@ impl Code {
         if word.len() != 0 {
             tkns.tokens.push(word.clone());
         }
-        println!("Tokens: {:?}", tkns.tokens);
+	tkns.tokens = tkns.tokens.clone().into_iter().filter(|s| s != "").collect();
+        println!("{:?}", tkns.tokens);
         tkns
     }
 }
@@ -77,11 +85,12 @@ fn main() {
         "echo $VAR",
         "command $(subcommand)",
         "find . -name \"*.py\" -exec grep \"def \" {} \\;",
-	"la|ls"
+	"la|ls",
+	"ls -l | grep file; la"
     ];
-
     for cmd in commands {
+	println!("{}", cmd);
 	let _tkn = Code::new(cmd);
+	println!();
     }
-
 }
