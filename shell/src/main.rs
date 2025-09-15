@@ -31,6 +31,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 continue;
             }
             Ok(_) => {
+                if input.trim().len() == 0 {
+                    continue;
+                }
                 evaluate(&input);
                 io::stdout().flush().unwrap();
                 rl.add_history_entry(input.trim_end_matches('\n'))?;
