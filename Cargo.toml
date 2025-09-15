@@ -1,6 +1,11 @@
-[package]
-name = "Lexical"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
+[workspace]
+resolver = "3"
+members = [
+    "shell",
+    "evaluating",
+    "commands",
+    "executer",
+    "lexing",
+    "parsing",
+    "commands/src/bin/*",
+    ]
