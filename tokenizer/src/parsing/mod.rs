@@ -27,7 +27,7 @@ impl AstNode {
 
         for lexeme in lexer.lexemes {
             match lexeme.as_str() {
-                "&&" | ";" => {
+                ";" => {
                     if inside_pipeline && let AstNode::Pipeline(pipeline_cmds) = &mut current_token {
                         pipeline_cmds.push(current_cmd.clone());
                         sequence.push(current_token.clone());

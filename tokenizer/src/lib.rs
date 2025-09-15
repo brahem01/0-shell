@@ -6,7 +6,7 @@ use std::io;
 
 pub fn evaluate(user_input: &str) {
     let mut cmd_line: String = user_input.to_string().trim().to_string();
-    if !cmd_line.ends_with(";") && !cmd_line.ends_with("&&") {
+    if !cmd_line.ends_with(";") {
         cmd_line += ";";
     }
     let lexer_tokens = Lexer::new(&cmd_line);
@@ -20,7 +20,6 @@ pub fn evaluate(user_input: &str) {
                 }
                 exec(cmds);
             } else if let AstNode::Command(command) = node {
-                // from_filename(".env").expect("Failed to read .env file");
                 exec(vec![to_cmd(command)]);
             }
         }
