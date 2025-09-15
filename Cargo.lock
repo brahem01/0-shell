@@ -258,6 +258,10 @@ name = "mkdir"
 version = "0.1.0"
 
 [[package]]
+name = "mv"
+version = "0.1.0"
+
+[[package]]
 name = "nibble_vec"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
