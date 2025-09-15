@@ -48,9 +48,15 @@ impl Command for Ls {
             if arg.starts_with('-') && arg.len() > 1 {
                 for ch in arg.chars().skip(1) {
                     match ch {
-                        'a' => show_all = true,
-                        'l' => long = true,
-                        'F' => classify = true,
+                        'a' => {
+                            show_all = true;
+                        }
+                        'l' => {
+                            long = true;
+                        }
+                        'F' => {
+                            classify = true;
+                        }
                         _ => {
                             let _ = writeln!(cmd.stderr, "ls: invalid option -- '{}'", ch);
                             let _ = writeln!(cmd.stderr, "Try 'ls --help' for more information.");
@@ -190,7 +196,12 @@ fn display_entry(cmd: &mut Cmd, paths: Vec<PathBuf>, long: bool, classify: bool)
                 _ => '-',
             };
 
-            let perms_string = format_mode(metadata.permissions().mode());
+            let mut perms_string = format_mode(metadata.permissions().mode());
+            if has_acl(path) {
+                let mut perms_with_acl = perms_string.clone();
+                perms_with_acl.push('+');
+                perms_string = perms_with_acl;
+            }
 
             let symlink_target = if file_type_char == 'l' {
                 let is_old = metadata
@@ -346,6 +357,16 @@ fn format_mode(mode: u32) -> String {
 
     perms
 }
+fn has_acl(path: &Path) -> bool {
+    if let Ok(xattrs) = xattr::list(path) {
+        for attr in xattrs {
+            if attr == "system.posix_acl_access" || attr == "system.posix_acl_default" {
+                return true;
+            }
+        }
+    }
+    false
+}
 
 fn colored_names(display_name: &str, metadata: fs::Metadata) -> String {
     let mut display_name = display_name.to_string();
@@ -356,26 +377,19 @@ fn colored_names(display_name: &str, metadata: fs::Metadata) -> String {
         } else {
             display_name = display_name.blue().bold().to_string();
         }
-    } 
-    else if metadata.file_type().is_symlink() {
+    } else if metadata.file_type().is_symlink() {
         display_name = display_name.cyan().bold().to_string();
-    }
-    else if metadata.file_type().is_socket() {
+    } else if metadata.file_type().is_socket() {
         display_name = display_name.magenta().to_string();
-    }
-    else if metadata.file_type().is_fifo() {
+    } else if metadata.file_type().is_fifo() {
         display_name = display_name.yellow().to_string();
-    } 
-    else if (metadata.permissions().mode() & 0o111) != 0 {
+    } else if (metadata.permissions().mode() & 0o111) != 0 {
         display_name = display_name.green().to_string();
-    }
-    else if metadata.permissions().mode() == 0 {
+    } else if metadata.permissions().mode() == 0 {
         display_name = display_name.on_blue().to_string();
-    }
-    else if metadata.file_type().is_char_device()  || metadata.file_type().is_block_device() {
+    } else if metadata.file_type().is_char_device() || metadata.file_type().is_block_device() {
         display_name = display_name.yellow().bold().to_string();
-    } 
-    else {
+    } else {
         display_name = display_name.normal().to_string();
     }
 
