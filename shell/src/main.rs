@@ -3,9 +3,20 @@ use rustyline::error::ReadlineError;
 use colored::*;
 use std::env;
 use std::{ error::Error, fs, io::{ self, Write } };
-use tokenizer::evaluate;
+use tokenizer::{evaluate, check_background_jobs};
+use nix::sys::signal::{self, Signal, SigHandler};
+
 fn main() -> Result<(), Box<dyn Error>> {
     dotenvy::dotenv().ok();
+    
+    // Ignore terminal signals in the shell
+    unsafe {
+        signal::signal(Signal::SIGINT, SigHandler::SigIgn).ok();
+        signal::signal(Signal::SIGTSTP, SigHandler::SigIgn).ok();
+        signal::signal(Signal::SIGTTIN, SigHandler::SigIgn).ok();
+        signal::signal(Signal::SIGTTOU, SigHandler::SigIgn).ok();
+    }
+
     let mut rl = DefaultEditor::new()?;
     let history_path = "/tmp/.minishell_history";
     println!(
@@ -25,6 +36,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     loop {
+        check_background_jobs();
         let mut input = String::new();
         match read_input(&mut rl, &mut input) {
             Ok(0) => {

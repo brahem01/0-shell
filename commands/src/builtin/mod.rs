@@ -8,12 +8,22 @@ pub mod cd;
 pub mod clear;
 pub mod exit;
 pub mod pwd;
+pub mod jobs;
+pub mod jobs_cmd;
+pub mod fg;
+pub mod bg;
+pub mod kill;
+
+pub use jobs::{JOB_MANAGER, JobStatus, Job};
 
 pub struct Registry {
     commands: HashMap<&'static str, Box<dyn Command>>,
 }
 
-use crate::builtin::{cd::Cd, clear::Clear, exit::Exit, pwd::Pwd,};
+use crate::builtin::{
+    cd::Cd, clear::Clear, exit::Exit, pwd::Pwd,
+    jobs_cmd::Jobs, fg::Fg, bg::Bg, kill::Kill,
+};
 
 pub struct Cmd {
     pub cmd: String,
@@ -21,12 +31,14 @@ pub struct Cmd {
     pub stdin: Box<dyn Read>,
     pub stdout: Box<dyn Write>,
     pub stderr: Box<dyn Write>,
+    pub is_background: bool,
 }
 
 impl Debug for Cmd {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         writeln!(f, "name: {}", self.cmd)?;
         write!(f, "args: {:?}", self.args)?;
+        write!(f, "bg: {}", self.is_background)?;
         Ok(())
     }
 }
@@ -37,9 +49,10 @@ impl Cmd {
         args: Vec<String>,
         stdin: Box<dyn Read>,
         stdout: Box<dyn Write>,
-        stderr: Box<dyn Write>
+        stderr: Box<dyn Write>,
+        is_background: bool
     ) -> Self {
-        Self { cmd, args, stdin, stdout, stderr }
+        Self { cmd, args, stdin, stdout, stderr, is_background }
     }
 }
 
@@ -57,6 +70,10 @@ impl Registry {
         register.register(Box::new(Clear));
         register.register(Box::new(Exit));
         register.register(Box::new(Pwd));
+        register.register(Box::new(Jobs));
+        register.register(Box::new(Fg));
+        register.register(Box::new(Bg));
+        register.register(Box::new(Kill));
         register
     }
 

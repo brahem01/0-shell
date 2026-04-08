@@ -32,7 +32,7 @@ impl Lexer {
                         state = ParseState::Quote(chars[index]);
                     }
                 }
-                '|' | ';' => {
+                '|' | ';' | '&' => {
                     if
                         matches!(state, ParseState::Quote(_)) ||
                         matches!(state, ParseState::Operator(c) if c == chars[index])

@@ -39,6 +39,10 @@ env:
 	@echo "✅ .env updated:"
 	@cat $(ENV_FILE)
 
+test: build copy env
+	@echo "Running tests..."
+	@./tests/job_control_test.sh
+
 run: 
 	@echo "Running shell..."
 	@$(TARGET_DIR)/shell

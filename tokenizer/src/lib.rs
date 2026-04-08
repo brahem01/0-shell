@@ -1,7 +1,7 @@
 mod parsing;
 use parsing::Lexer;
 use parsing::{ AstNode, Command };
-pub use executer::{ exec, Cmd };
+pub use executer::{ exec, check_background_jobs, Cmd };
 use std::io;
 
 pub fn evaluate(user_input: &str) {
@@ -13,14 +13,21 @@ pub fn evaluate(user_input: &str) {
     let ast_data = AstNode::new(lexer_tokens);
     for sub_vector in ast_data {
         for node in sub_vector {
-            if let AstNode::Pipeline(commands) = node {
-                let mut cmds: Vec<Cmd> = Vec::new();
-                for c in commands {
-                    cmds.push(to_cmd(c.clone()));
+            match node {
+                AstNode::Pipeline(commands, bg) => {
+                    let mut cmds: Vec<Cmd> = Vec::new();
+                    for mut c in commands {
+                        c.is_background = bg;
+                        cmds.push(to_cmd(c));
+                    }
+                    exec(cmds);
                 }
-                exec(cmds);
-            } else if let AstNode::Command(command) = node && command.program.len() != 0 {
-                exec(vec![to_cmd(command)]);
+                AstNode::Command(command) => {
+                    if command.program.len() != 0 {
+                        exec(vec![to_cmd(command)]);
+                    }
+                }
+                AstNode::None => {}
             }
         }
     }
@@ -33,5 +40,6 @@ fn to_cmd(command: Command) -> Cmd {
         stdin: Box::new(io::stdin()),
         stdout: Box::new(io::stdout()),
         stderr: Box::new(io::stderr()),
+        is_background: command.is_background,
     }
 }

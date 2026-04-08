@@ -1,6 +1,6 @@
-# 🐚 Custom Shell in Rust
+# 🐚 Custom Shell in Rust (Job Control)
 
-A minimalist Unix-like shell written in **Rust**, supporting a set of builtins and common commands.  
+A minimalist Unix-like shell written in **Rust**, supporting a set of builtins, common commands, and **Job Control**.  
 ⚠️ Unlike traditional shells, this shell **does not run any system binaries** — it only executes the ones **built and provided inside this project**.
 
 ---
@@ -13,36 +13,44 @@ A minimalist Unix-like shell written in **Rust**, supporting a set of builtins a
 - `exit` – Exit the shell
 - `clear` – Clear the terminal screen
 
+### Job Control Builtins
+- `jobs` – List active jobs.
+  - `-l` → Long format (includes PGID).
+  - `-p` → List only PGIDs.
+  - `-r` → Only running jobs.
+  - `-s` → Only stopped jobs.
+- `bg [%job_id]` – Resume a stopped job in the background.
+- `fg [%job_id]` – Bring a background/stopped job to the foreground.
+- `kill <pid> | %job_id` – Send SIGTERM to a process or job.
+
+### Job Control Features
+- **Background execution**: Append `&` to a command to run it in the background.
+- **Stop jobs**: Press `Ctrl + Z` to stop (suspend) the current foreground job.
+- **Job Status Notification**: The shell notifies you when background jobs complete or change status.
+
 ### External Commands
-- `echo` – Print arguments to standard output
-- `ls` – List directory contents  
-  - Supports:  
-    - `-l` → long listing format  
-    - `-a` → include hidden files  
-    - `-F` → classify entries with `/`, `*`, `@`  
-- `cat` – Concatenate and display file contents
-- `cp` – Copy files
-- `rm` – Remove files and directories (`-r` for recursive)
-- `mv` – Move/rename files
-- `mkdir` – Create directories
+- `echo`, `ls`, `cat`, `cp`, `rm`, `mv`, `mkdir`.
 
-### Supported
-- Pipelines: `cmd1 | cmd2`
-- Command chaining: `cmd1 && cmd2`
+### Shell Capabilities
+- **Pipelines**: `cmd1 | cmd2`
+- **Command chaining**: `cmd1 && cmd2`
+- **Multiple commands**: `cmd1 ; cmd2`
 
+---
 
 ## 📂 Project Structure
 
 ```
 ├── bin/                # Installed command binaries (after build)
-├── commands/           # Implementation of external commands
+├── commands/           # Implementation of external commands and builtins
 │   ├── src/bin/        # Each subcommand (cat, ls, etc.)
-│   └── builtin/        # Builtin commands (cd, pwd, exit, clear)
-├── executer/           # Executes parsed commands
-├── tokenizer/          # Tokenizer & parser for command-line input
-├── shell/              # Main shell entry point
-├── Makefile            # Build, install, and run automation
-├── Cargo.toml          # Workspace configuration
+│   ├── builtin/        # Builtin commands (cd, jobs, fg, bg, etc.)
+│   └── src/lib.rs      # Registry for commands
+├── executer/           # Executes parsed commands and manages job control
+├── tokenizer/          # Tokenizer & parser for command-line input (supports |, ;, &)
+├── shell/              # Main shell entry point with signal handling
+├── Makefile            # Build, install, test, and run automation
+├── tests/              # Integration tests
 └── README.md           # You are here!
 ```
 
@@ -50,66 +58,61 @@ A minimalist Unix-like shell written in **Rust**, supporting a set of builtins a
 
 ## ⚙️ Build & Run
 
-### 1. Build Everything
+### 1. Build & Install Everything
 ```sh
 make
 ```
+This cleans, builds, and copies binaries to the `bin/` directory.
 
 ### 2. Run the Shell
 ```sh
 make run
 ```
 
-### 3. Environment Setup
-After `make`, a `.env` file is generated with the shell binary path:
+### 3. Run Tests
 ```sh
-DIR=/absolute/path/to/project/bin/
-```
-
-You can source it if needed:
-```sh
-source .env
+make test
 ```
 
 ---
 
 ## 🖥️ Usage Examples
 
+### Running in Background
 ```sh
-$ pwd
-/home/user/projects/shell
+$ sleep 5 &
+[1] 12345
+$ jobs
+[1]+  Running                 sleep 5 &
+```
 
-$ ls -laF
-drwxr-xr-x   5 user user  160 Sep 15 12:00 ./
-drwxr-xr-x  18 user user  576 Sep 15 12:00 ../
--rwxr-xr-x   1 user user 8192 Sep 15 12:00 shell*
+### Stopping and Resuming Jobs
+```sh
+$ sleep 100
+^Z
+[1]+  Stopped                 sleep 100
+$ bg %1
+[1] sleep 100 &
+$ jobs
+[1]+  Running                 sleep 100 &
+$ fg %1
+sleep 100
+```
 
-$ echo "Hello, Rust!"
-Hello, Rust!
-
-$ mkdir test && cd test
-$ echo "demo" > file.txt
-$ cat file.txt
-demo
-
-$ cp file.txt copy.txt
-$ ls
-file.txt  copy.txt
-
-$ rm -r test
-
-$ echo "hello" | cat
-hello
+### Pipelines with Background
+```sh
+$ ls -l | cat &
+[2] 12346
 ```
 
 ---
 
-## ✅ Roadmap
+## ✅ Implementation Details
 
-- [ ] Add redirection (`>`, `<`)
-- [ ] Implement job control (`&`, `fg`, `bg`)
-- [ ] Add more commands (`head`, `tail`, `grep`, etc.)
-- [ ] Improve error handling & messages
+- **Process Groups**: Each job (single command or pipeline) is put into its own process group (`setpgid`).
+- **Terminal Control**: The shell uses `tcsetpgrp` to switch control of the terminal between itself and foreground jobs.
+- **Signal Handling**: The shell ignores `SIGINT` and `SIGTSTP` while a foreground job is running, allowing the job to receive them.
+- **Asynchronous Monitoring**: The shell checks for status changes in background jobs using `waitpid` with `WNOHANG` before each prompt.
 
 ---
 
